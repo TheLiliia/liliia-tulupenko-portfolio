@@ -1,0 +1,1128 @@
+/* ============================================================================
+   SPLIT-FLAP BOARD — design system
+   Shared token + component layer for the landing page (index.html) and the
+   portfolio deck (deck.html). World: a split-flap departure board — near-black
+   ground, one monospace face as the character grid, one flap-settle on load.
+   Seed a233f19a.
+   ========================================================================== */
+
+/* ---- 1. Fonts ------------------------------------------------------------- */
+/* Loaded via <link> in each document. All carry the full Ukrainian Cyrillic
+   set; none is a training-data default.
+   Dela Gothic One — display: the wordmark, section titles, deck megatype and
+                     figures. A heavy woodblock-poster face.
+   PT Mono         — the board: slugs, entry headings, labels, tabular data.
+   Golos Text      — running body copy only. */
+
+/* ---- 2. Tokens --------------------------------------------------------------- */
+:root {
+  color-scheme: dark;
+
+  --bg:          #0a0a0b;
+  --bg-strip:    #08080a;
+  --surface:     #131317;
+  --rule:        #26262c;
+  --rule-bright: #3a3a44;
+
+  --ink:        #eceae4;   /* 16.9:1 on --bg */
+  --ink-dim:    #9d9d97;   /*  8.6:1 — secondary text */
+  --ink-faint:  #838380;   /*  5.2:1 — fine print */
+
+  --live:      #ffb000;    /* the one action colour */
+  --live-ink:  #0a0a0b;
+  --live-hover: color-mix(in oklab, var(--live) 88%, #ffffff);
+
+  /* deck-only status colours (slide 5) */
+  --placed:    #48d4ef;
+  --confirmed: #49b884;
+  --flash:     #ff4d63;
+
+  /* split-flap tile — the one modelled object; used at rest on the deck */
+  --flap-leaf-top:    #232329;
+  --flap-leaf-bottom: #101014;
+  --flap-seam:  rgba(0, 0, 0, .7);
+  --flap-edge:  rgba(255, 255, 255, .06);
+  --flap-lit:   rgba(255, 255, 255, .05);
+
+  --f-display: "Dela Gothic One", system-ui, "Segoe UI", sans-serif;
+  --f-display-weight: 400;   /* heavy display faces sit at 400; presets may raise it */
+  --f-mono: "PT Mono", ui-monospace, "Cascadia Mono", "DejaVu Sans Mono", monospace;
+  /* the ASCII grids need a real fixed-width face regardless of the theme font */
+  --f-grid: "PT Mono", ui-monospace, "Cascadia Mono", "DejaVu Sans Mono", monospace;
+  --f-body: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --fs-mega:  clamp(1.85rem, 5.4vw, 3.4rem);
+  --fs-h2:    clamp(1.25rem, 2.2vw, 1.7rem);
+  --fs-h3:    clamp(1.02rem, 1.5vw, 1.2rem);
+  --fs-lede:  clamp(1.1rem, 1.7vw, 1.35rem);
+  --fs-body:  1rem;
+  --fs-mono:  0.9rem;
+  --fs-cell:  clamp(0.82rem, 1.1vw, 0.95rem);
+  --fs-flag:  0.8rem;
+  --fs-micro: 0.78rem;
+  --fs-slide-name:  clamp(1.7rem, 5.4vw, 3.4rem);
+  --fs-slide-title: clamp(1.1rem, 2vw, 1.55rem);
+
+  --lh-body: 1.6;
+
+  --gap:   clamp(1rem, 2vw, 1.5rem);
+  --gap-lg: clamp(1.9rem, 4vw, 2.9rem);
+  --pad:   clamp(1.4rem, 6vw, 2.5rem);
+  --sect:  clamp(2.25rem, 4.5vw, 3.5rem);
+
+  --maxw: 1120px;
+  /* distance from the viewport's left edge to where .wrap content begins —
+     lets full-bleed sections line up with the centred column above them */
+  --wrap-gutter: max(var(--pad), calc(50vw - var(--maxw) / 2 + var(--pad)));
+
+  --hair: 1px solid var(--rule);
+  --hero-overlay: 0.7;   /* scrim opacity over the hero animation */
+  --flap-step: 30ms;
+  --ease-detent: cubic-bezier(.2, .9, .25, 1);
+}
+
+/* ---- 3. Reset ------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+html {
+  -webkit-text-size-adjust: 100%;
+  background: #0a0a0b;
+}
+body {
+  margin: 0;
+  overflow-x: clip;            /* contain full-bleed (100vw) sections */
+  background: #0a0a0b;
+  background: var(--bg);
+  color: #eceae4;
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+h1, h2, h3, p, ul, ol { margin: 0; }
+ul, ol { padding: 0; list-style: none; }
+a { color: inherit; text-decoration: none; }
+img { display: block; max-width: 100%; }
+
+/* ---- 4. Browser surfaces — themed, not defaulted ----------------------- */
+::selection { background: var(--live); color: var(--live-ink); }
+::-moz-selection { background: var(--live); color: var(--live-ink); }
+html { scrollbar-color: var(--rule-bright) var(--bg); scrollbar-width: thin; }
+::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar-track { background: var(--bg-strip); }
+::-webkit-scrollbar-thumb { background: var(--rule-bright); border: 3px solid var(--bg-strip); }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-faint); }
+:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
+:target { scroll-margin-top: 4rem; }
+.tnum, .flap, .figure { font-variant-numeric: tabular-nums; }
+
+/* ---- 5. Layout shell --------------------------------------------------- */
+.wrap {
+  max-width: var(--maxw);
+  margin-inline: auto;
+  padding-inline: var(--pad);
+}
+.skip {
+  position: absolute; left: -9999px; top: 0;
+  background: var(--live); color: var(--live-ink);
+  padding: .6rem 1rem; font-family: var(--f-mono); z-index: 99;
+}
+.skip:focus { left: 1rem; top: 1rem; }
+
+/* ---- 5b. Landing page type override ---------------------------------- */
+/* index.html runs on Montserrat 700 (display) and Noto Sans everywhere else —
+   including what the base system sets in mono (role line, block headings,
+   buttons, marquee, tags, contact links). Only the ASCII grids stay
+   fixed-width, via their own --f-grid token (untouched here). Scoped to
+   :has(.hero) so the deck keeps its own faces; Pink is the fixed accent
+   (there is no picker on the shipped page). */
+body:has(.hero) {
+  --f-display: "Montserrat", system-ui, sans-serif;
+  --f-display-weight: 700;
+  --f-body: "Noto Sans", system-ui, sans-serif;
+  --f-mono: "Noto Sans", system-ui, sans-serif;
+  --live: #f56fa5;
+}
+
+/* ---- 6. Hero ---------------------------------------------------------------- */
+/* Full-bleed cycling ASCII animation behind everything; an opaque text card
+   centred on top. */
+.hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  /* break out of .wrap so the visual is edge-to-edge and nothing clips it */
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
+  padding: clamp(3rem, 9vw, 6rem) var(--pad) clamp(2rem, 5vw, 3.5rem);
+  overflow: hidden;
+}
+
+/* the animation fills the (now full-width) hero, sitting under the text;
+   ::after is the adjustable scrim that keeps the text readable over it */
+.hero-anim {
+  position: absolute;
+  inset: 0;
+  background: #050506;
+  overflow: hidden;
+  z-index: 0;
+}
+/* the hero animation is always rendered in bone, independent of the accent */
+.hero-anim .ascii-field { position: absolute; inset: 0; color: #dcd7cb; }
+.hero-anim::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 6, 8, var(--hero-overlay));
+  pointer-events: none;
+}
+
+.hero-copy {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  /* same content width as .wrap (the sections below) */
+  max-width: calc(var(--maxw) - 2 * var(--pad));
+  padding: clamp(1.75rem, 5vw, 3.25rem) clamp(1.5rem, 5vw, 3rem);
+  text-align: center;
+}
+.hero-copy .lede { max-width: none; margin-inline: auto; }
+.hero .wordmark span {
+  font-size: clamp(2.75rem, 9vw, 6.5rem);
+  letter-spacing: -0.015em;
+}
+.wordmark { margin: 0; }
+.hero-role {
+  margin-top: .9rem;
+  font-family: var(--f-mono);
+  font-size: clamp(1rem, 1.6vw, 1.25rem);
+  color: var(--ink);
+}
+.hero .lede { margin-top: clamp(1.4rem, 3.5vw, 2.2rem); }
+.hero-cta { margin-top: clamp(1.8rem, 4vw, 2.6rem); }
+
+@media (max-width: 860px) {
+  /* stretch to the full mobile screen rather than collapsing to content */
+  .hero { min-height: 100vh; min-height: 100dvh; }
+}
+
+/* ---- 6c. Partner marquee --------------------------------------------------- */
+/* Full-bleed accent band directly under the hero; partner names loop across. */
+.marquee {
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
+  overflow: hidden;
+  background: var(--live);
+  color: var(--live-ink);
+  padding-block: clamp(.7rem, 1.7vw, 1.05rem);
+  font-family: var(--f-mono);
+  font-size: var(--fs-cell);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.marquee__inner {
+  display: flex;
+  width: max-content;
+  animation: marquee 34s linear infinite;
+}
+.marquee__group {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: clamp(2rem, 6vw, 4.5rem);
+  padding-right: clamp(2rem, 6vw, 4.5rem);
+  white-space: nowrap;
+}
+.marquee__group > span::before {
+  content: "";
+  display: inline-block;
+  vertical-align: middle;
+  width: .42em;
+  height: .42em;
+  border-radius: 50%;
+  background: currentColor;
+  margin-right: clamp(2rem, 6vw, 4.5rem);
+}
+@keyframes marquee { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+  .marquee { overflow-x: auto; }
+  .marquee__inner { animation: none; }
+}
+
+/* ---- 6b. About me ------------------------------------------------------- */
+/* Left: a cross-ruled quadrant grid — ПРО / МЕНЕ stacked, the blurb in the
+   lower-right quadrant. Right: the portrait, inset from the edges. */
+.section--about {
+  /* one height drives both columns, so the ruled grid ends exactly where the
+     portrait does */
+  --about-h: clamp(420px, 62vh, 620px);
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  align-items: center;
+  gap: clamp(1.5rem, 5vw, 4rem);
+  padding-block: clamp(2.5rem, 7vw, 5rem);
+  border-top: 0;
+}
+.about-grid {
+  height: var(--about-h);
+  display: grid;
+  /* col 1 fits the widest kicker exactly, col 2 is the gap that carries the
+     vertical rule, so the rule can never sit under the text. */
+  grid-template-columns: max-content clamp(1rem, 3vw, 2.4rem) minmax(0, 1fr);
+  /* top row hugs ПРО + the tags; МЕНЕ and the blurb get everything left */
+  grid-template-rows: auto minmax(0, 1fr);
+}
+/* rides the real row boundary, so it can never cut through the blurb */
+.about-grid::after {
+  content: "";
+  grid-column: 1 / -1;
+  grid-row: 1;
+  align-self: end;
+  height: 1px;
+  background: var(--rule-bright);
+  pointer-events: none;
+}
+.about-rule {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  justify-self: center;
+  width: 1px;
+  background: var(--rule-bright);
+}
+.about-kicker {
+  grid-column: 1;
+  margin: 0;
+  font-family: var(--f-display);
+  font-weight: var(--f-display-weight);
+  font-size: clamp(1.7rem, 4.4vw, 3rem);
+  line-height: 0.92;
+  letter-spacing: 0.005em;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.about-kicker--a { grid-row: 1; align-self: end;   padding-bottom: clamp(.6rem, 2vh, 1.4rem); }
+.about-kicker--b { grid-row: 2; align-self: start; padding-top:    clamp(.6rem, 2vh, 1.4rem); }
+
+/* the sectors, sitting in the empty top-right quadrant above the blurb */
+.about-tags {
+  grid-column: 3;
+  grid-row: 1;
+  align-self: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  padding-left: clamp(.35rem, 1vw, .8rem);
+  padding-bottom: clamp(.8rem, 3vh, 2rem);
+}
+.about-tags li {
+  font-family: var(--f-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: .04em;
+  color: var(--live);
+  border: 1px solid var(--live);
+  border-radius: 2px;
+  padding: .25em .6em;
+}
+.about-text {
+  grid-column: 3;
+  grid-row: 2;
+  align-self: start;
+  max-width: 34ch;
+  padding-left: clamp(.35rem, 1vw, .8rem);
+  padding-top: clamp(.6rem, 2vh, 1.4rem);
+  font-family: var(--f-body);
+  font-size: var(--fs-lede);
+  line-height: 1.5;
+  text-align: left;
+  text-wrap: pretty;
+  color: var(--ink);
+}
+.about-photo {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: clamp(1rem, 3vw, 2.5rem);
+}
+.about-photo img {
+  width: auto;
+  max-width: 100%;
+  height: var(--about-h);
+  object-fit: cover;
+  background: var(--surface);
+}
+@media (max-width: 860px) {
+  .section--about {
+    grid-template-columns: 1fr;
+    min-height: 0;
+    padding-block: var(--sect);
+    gap: 2.4rem;
+  }
+  .about-grid { height: auto; }
+  .about-photo { padding-inline: 0; order: -1; }
+  .about-photo img { height: auto; max-height: 68vh; }
+}
+
+.lede {
+  font-family: var(--f-body);
+  font-size: var(--fs-lede);
+  line-height: 1.42;
+  color: var(--ink);
+  max-width: 44ch;
+  text-wrap: pretty;
+}
+
+/* ---- 7. Wordmark ------------------------------------------------------- */
+.wordmark span {
+  display: block;
+  font-family: var(--f-display);
+  font-weight: var(--f-display-weight);
+  font-size: var(--fs-mega);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+/* ---- 7b. Split-flap (deck figures only) ------------------------------------- */
+.flap {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: .1em;
+  font-family: var(--f-mono);
+  line-height: 1;
+}
+.flap__word { display: inline-flex; white-space: nowrap; }
+.flap__cell {
+  position: relative;
+  display: inline-block;
+  min-width: .62em;
+  text-align: center;
+  color: var(--ink);
+  background:
+    linear-gradient(180deg,
+      var(--flap-leaf-top) 0 calc(50% - .5px),
+      var(--flap-leaf-bottom) calc(50% + .5px) 100%);
+  padding: .16em .06em .18em;
+  border-radius: 2px;
+  box-shadow: inset 0 1px 0 var(--flap-lit), 0 1px 1px var(--flap-seam);
+  overflow: hidden;
+}
+.flap__cell + .flap__cell { margin-left: 2px; }
+.flap__cell::after {
+  content: "";
+  position: absolute; left: 0; right: 0; top: 50%;
+  border-top: 1px solid var(--flap-seam);
+  box-shadow: 0 -1px 0 var(--flap-edge);
+  transform: translateY(-.5px);
+}
+.flap__cell.is-stepping { color: var(--ink-dim); }
+.flap__cell.is-stepping::before {
+  content: "";
+  position: absolute; inset: 0 0 50% 0;
+  background: linear-gradient(180deg, var(--flap-edge), transparent);
+  transform-origin: bottom;
+  animation: flap-tick var(--flap-step) linear;
+}
+@keyframes flap-tick {
+  from { transform: scaleY(1); }
+  50%  { transform: scaleY(.02); }
+  to   { transform: scaleY(1); }
+}
+.flap[data-space] .flap__cell--space { background: transparent; }
+
+
+/* ---- 8. Button ------------------------------------------------------------- */
+/* Filled with the accent at rest; on hover a white fill floods up from the
+   bottom edge. */
+.btn {
+  position: relative;
+  z-index: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .85rem 1.6rem;
+  font-family: var(--f-mono);
+  font-size: var(--fs-cell);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--live-ink);
+  background: var(--live);
+  border: 0;
+  border-radius: 2px;
+  overflow: hidden;
+  transition: color .28s var(--ease-detent);
+}
+.btn::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 100%;
+  z-index: -1;
+  background: #ffffff;
+  transform: translateY(100%);
+  transition: transform .34s var(--ease-detent);
+}
+.btn svg {
+  width: 1.1em; height: 1.1em;
+  fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: square;
+}
+.btn:hover, .btn:focus-visible {
+  color: #0a0a0b;
+  outline: none;
+}
+.btn:hover::before, .btn:focus-visible::before { transform: translateY(0); }
+
+/* ---- 9. ASCII band ------------------------------------------------------- */
+/* <pre class="ascii-field"> is filled by system.js. Here it is a full-width
+   visual band — the ASCII-art brief made literal — not a boxed widget. */
+.ascii-field {
+  margin: 0;
+  font-family: var(--f-grid);
+  white-space: pre;
+  overflow: hidden;
+  user-select: none;
+  pointer-events: none;
+  color: var(--ink-dim);
+  letter-spacing: 0;
+}
+/* (The hero owns the only animated field on this page — see section 6.) */
+
+/* deck-only faint backdrop variant */
+.ascii-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: .12;
+  color: var(--ink-dim);
+  -webkit-mask-image: radial-gradient(120% 80% at 80% 20%, #000 30%, transparent 78%);
+  mask-image: radial-gradient(120% 80% at 80% 20%, #000 30%, transparent 78%);
+}
+.ascii-bg + * { position: relative; z-index: 1; }
+
+/* ---- 10. Sections + headings ------------------------------------------------ */
+.section { padding-block: var(--sect); border-top: var(--hair); }
+.section:has(+ .section) { padding-bottom: clamp(1.25rem, 2.5vw, 2rem); }
+.section-head {
+  margin: 0 0 clamp(1.4rem, 2.6vw, 2rem);
+  font-family: var(--f-display);
+  font-weight: var(--f-display-weight);
+  font-size: var(--fs-h2);
+  letter-spacing: 0;
+  color: var(--ink);
+}
+
+/* ---- 11. What I do ------------------------------------------------------- */
+/* Full-bleed so each block can use the left half of the viewport while the
+   fixed .stage owns the right half. Content re-aligns with the centred column
+   above via --wrap-gutter. */
+.section--full { border-top: 0; padding-block: 0; }
+
+.dolist {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  padding-inline: var(--wrap-gutter);
+  border-top: 0;
+}
+/* Each block is a full-height two-up: copy on one side, a rotating ASCII
+   solid on the other. Sides alternate down the list. */
+.do {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(1.5rem, 5vw, 4.5rem);
+  min-height: 100vh;
+  padding-block: clamp(2rem, 8vh, 5rem);
+  border-bottom: var(--hair);
+  scroll-margin-top: 4rem;
+}
+.do:last-child { border-bottom: 0; }
+.do:nth-of-type(even) .do-text  { order: 2; }
+.do:nth-of-type(even) .do-shape { order: 1; }
+
+.do-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 3vh, 1.8rem);
+}
+.do-h {
+  margin: 0;
+  font-family: var(--f-mono);
+  font-size: var(--fs-h3);
+  line-height: 1.3;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.do-body { max-width: 52ch; }
+.do-body .copy { margin: 0; color: var(--ink-dim); text-wrap: pretty; }
+.copy strong { color: var(--ink); font-weight: 600; }
+
+.do-shape {
+  min-width: 0;
+  min-height: min(70vh, 560px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--live);
+}
+.do-shape > div {                 /* AsciiEffect output element */
+  color: var(--live) !important;
+  background: transparent !important;
+  font-family: var(--f-grid);
+}
+.do-shape table { border-spacing: 0 !important; line-height: 1.05em !important; }
+
+@media (max-width: 860px) {
+  .section--full { padding-block: var(--sect); }
+  .dolist { width: auto; margin-left: 0; padding-inline: 0; border-top: var(--hair); }
+  .do {
+    grid-template-columns: 1fr;
+    min-height: 0;
+    gap: 1.7rem;
+    padding-block: 2.3rem;
+  }
+  .do:nth-of-type(even) .do-text  { order: 0; }
+  .do:nth-of-type(even) .do-shape { order: 0; }
+  .do-shape { min-height: 44vh; }
+}
+
+/* ---- 12. Contact links --------------------------------------------------- */
+.links {
+  display: flex;
+  flex-direction: column;
+  gap: .9rem;
+  font-family: var(--f-mono);
+  font-size: var(--fs-mono);
+}
+.links a {
+  display: inline-block;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--rule-bright);
+  text-underline-offset: 4px;
+  transition: text-decoration-color .12s linear;
+}
+.links a:hover, .links a:focus-visible {
+  text-decoration-color: var(--live);
+  outline: none;
+}
+
+/* ---- 12b. Contact — a centred closing screen, no animation ------------- */
+.section--contact {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  border-top: 0;
+  padding-block: 0;
+}
+.contact-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: clamp(1.6rem, 4vw, 2.6rem);
+}
+.section--contact .section-head {
+  margin: 0;
+  font-size: var(--fs-mega);
+}
+.section--contact .links {
+  align-items: center;
+  gap: clamp(.9rem, 2vw, 1.4rem);
+  font-size: clamp(1.3rem, 3.6vw, 2.1rem);
+}
+/* accent fills up from the bottom edge on hover, like the button */
+.section--contact .links a {
+  position: relative;
+  z-index: 0;
+  padding: .12em .55em;
+  text-decoration: none;
+  overflow: hidden;
+  transition: color .28s var(--ease-detent);
+}
+.section--contact .links a::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 100%;
+  z-index: -1;
+  background: var(--live);
+  transform: translateY(100%);
+  transition: transform .34s var(--ease-detent);
+}
+.section--contact .links a:hover,
+.section--contact .links a:focus-visible { color: var(--live-ink); }
+.section--contact .links a:hover::before,
+.section--contact .links a:focus-visible::before { transform: translateY(0); }
+.section--contact .foot { text-align: center; }
+@media (max-width: 860px) {
+  .section--contact { min-height: 0; padding-block: var(--sect); }
+  .section--contact .section-head { font-size: var(--fs-h2); }
+}
+
+/* ---- 13. Footer ------------------------------------------------------- */
+.foot {
+  border-top: var(--hair);
+  padding-block: clamp(1.5rem, 3vw, 2.25rem) 2rem;
+  font-family: var(--f-mono);
+  font-size: var(--fs-micro);
+  color: var(--ink-faint);
+}
+
+/* ---- 14. Motion opt-out ------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+
+/* ============================================================================
+   DECK (deck.html)
+   ========================================================================== */
+.mega {
+  font-family: var(--f-display);
+  font-size: var(--fs-mega);
+  line-height: 1.16;
+  letter-spacing: 0;
+  color: var(--ink);
+  text-wrap: balance;
+  overflow-wrap: break-word;
+}
+.h2 {
+  font-family: var(--f-display);
+  font-size: var(--fs-h2);
+  line-height: 1.25;
+  letter-spacing: 0;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.h3 {
+  font-family: var(--f-mono);
+  font-size: var(--fs-h3);
+  color: var(--ink);
+}
+.mono-label {
+  font-family: var(--f-mono);
+  font-size: var(--fs-flag);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.figure {
+  font-family: var(--f-mono);
+  font-size: clamp(2.4rem, 10vw, 6rem);
+  line-height: .95;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+.figure--live { color: var(--live); }
+.figure__label {
+  display: block;
+  margin-top: .8rem;
+  max-width: 26ch;
+  font-family: var(--f-body);
+  font-size: var(--fs-body);
+  line-height: 1.45;
+  color: var(--ink-dim);
+}
+
+.board { display: flex; flex-direction: column; }
+.board__row {
+  display: grid;
+  grid-template-columns: var(--row-cols, 12ch 1fr auto);
+  align-items: center;
+  gap: clamp(1rem, 3vw, 2.5rem);
+  min-height: 2.6rem;
+  padding: .85rem clamp(.4rem, 1.5vw, 1rem);
+  border-bottom: var(--hair);
+  font-family: var(--f-mono);
+  font-size: var(--fs-cell);
+  transition: background .12s linear, transform .12s var(--ease-detent);
+}
+.board__row--link:hover, .board__row--link:focus-visible {
+  background: var(--surface);
+  transform: translateX(4px);
+  outline: none;
+}
+.board__slug {
+  color: var(--ink-dim);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.board__dest {
+  display: flex;
+  align-items: baseline;
+  color: var(--ink-dim);
+  font-family: var(--f-body);
+  font-size: var(--fs-body);
+  line-height: 1.4;
+}
+.board__dest-t { flex: 0 1 auto; }
+.board__dest strong { color: var(--ink); font-weight: 600; }
+.board__dest::after {
+  content: "";
+  flex: 1 1 3ch;
+  min-width: 2ch;
+  margin: 0 0 .12em 1.6ch;
+  border-bottom: 1px dotted var(--rule-bright);
+}
+.flag {
+  --c: var(--ink-dim);
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: .55ch;
+  font-family: var(--f-mono);
+  font-size: var(--fs-flag);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--c);
+  white-space: nowrap;
+}
+.flag::before {
+  content: "";
+  width: .55ch; height: .55ch;
+  background: var(--c);
+}
+.flag--live      { --c: var(--live); }
+.flag--placed    { --c: var(--placed); }
+.flag--confirmed { --c: var(--confirmed); }
+.flag--flash     { --c: var(--flash); }
+
+.deck {
+  --deck-pad: clamp(1.6rem, 4.5vw, 4rem);
+  --wall-margin: clamp(1rem, 4.5vh, 3.75rem);
+  scroll-snap-type: y mandatory;
+  overflow-y: auto;
+  height: 100vh;
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+/* Each slide is a card floating over the fixed ASCII wall; the wall shows
+   through the margin all around it. Card footprint + margins = one viewport,
+   so scroll-snap still lands one slide per gesture. */
+.slide {
+  scroll-snap-align: center;
+  width: min(var(--maxw), 90vw);
+  min-height: calc(100vh - 2 * var(--wall-margin));
+  margin: var(--wall-margin) auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: start;
+  align-content: center;
+  gap: clamp(1.2rem, 3vh, 2.4rem);
+  padding: var(--deck-pad);
+  background: var(--bg);
+  border: 1px solid var(--rule-bright);
+  border-radius: 4px;
+  box-shadow: 0 40px 90px -34px rgba(0, 0, 0, .9), 0 6px 20px -10px rgba(0, 0, 0, .7);
+  position: relative;
+  overflow: hidden;
+}
+.slide > * { max-width: 100%; overflow-wrap: anywhere; }
+.slide .wordmark span { font-size: var(--fs-slide-name); }
+.slide__title {
+  margin: 0;
+  font-family: var(--f-display);
+  font-size: var(--fs-slide-title);
+  line-height: 1.3;
+  letter-spacing: 0;
+  color: var(--ink);
+  max-width: 26ch;
+}
+.slide__title::after {
+  content: "";
+  display: block;
+  width: 3.5rem;
+  margin-top: .9rem;
+  border-top: 2px solid var(--live);
+}
+.slide__figures {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(1.5rem, 5vw, 4rem);
+  align-items: end;
+}
+.slide__foot {
+  position: absolute;
+  left: var(--deck-pad); right: var(--deck-pad); bottom: calc(var(--deck-pad) * .55);
+  display: flex; justify-content: space-between; align-items: baseline; gap: 1.5rem;
+  font-family: var(--f-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  border-top: var(--hair);
+  padding-top: .8rem;
+  padding-right: 9rem;
+}
+.slide__foot > span:last-child { text-align: right; }
+@media (max-width: 640px) {
+  .slide {
+    align-content: start;
+    overflow: visible;
+    padding-top: calc(var(--deck-pad) + env(safe-area-inset-top));
+    padding-bottom: calc(var(--deck-pad) + 3.5rem);
+  }
+  .slide__foot {
+    position: static;
+    margin-top: 2.4rem;
+    flex-direction: column;
+    gap: .3rem;
+    padding-right: 0;
+  }
+  .slide__foot > span:last-child { text-align: left; }
+}
+.deck-nav {
+  position: fixed;
+  right: clamp(1.1rem, 3vw, 2.25rem);
+  bottom: clamp(1.1rem, 3vw, 2.25rem);
+  display: flex; align-items: center; gap: .5rem;
+  font-family: var(--f-mono); font-size: var(--fs-flag);
+  z-index: 10;
+}
+.deck-nav__count {
+  margin-right: .3rem;
+  letter-spacing: .1em;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+.deck-nav button {
+  display: grid;
+  place-items: center;
+  width: 2.4rem; height: 2.4rem;
+  border: 1px solid var(--rule-bright);
+  color: var(--ink-dim);
+  background: var(--bg);
+  cursor: pointer;
+}
+.deck-nav button svg {
+  width: 1.15rem; height: 1.15rem;
+  fill: none; stroke: currentColor; stroke-width: 2.2;
+  stroke-linecap: square; stroke-linejoin: miter;
+}
+.deck-nav button:hover { color: var(--live); border-color: var(--live); }
+.deck-nav button:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
+.deck-progress {
+  position: fixed; left: 0; top: 0; height: 2px; width: 100%;
+  background: var(--live);
+  transform: scaleX(0);
+  transform-origin: left;
+  z-index: 10;
+  transition: transform .3s var(--ease-detent);
+}
+@media (max-width: 700px) {
+  .slide__figures { grid-template-columns: 1fr; gap: 2rem; }
+}
+
+/* ---- 14b. Preview controls over the deck ------------------------------------ */
+body:has(.controls) .deck { padding-top: 3.25rem; scroll-padding-top: 3.25rem; }
+
+/* ---- 15. Fixed ASCII wall behind the deck --------------------------------
+   One frozen abstract character field pinned to the viewport at full strength.
+   The slide cards sit on top; the wall is only seen in the margin around them.
+   No motion, inert to the pointer, and impossible to select or copy. */
+.deck-wall {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+.deck-wall pre {
+  margin: 0;
+  font-family: var(--f-mono);
+  font-size: 13px;
+  line-height: 13px;
+  letter-spacing: 0;
+  white-space: pre;
+  color: var(--live);
+  opacity: 1;
+}
+@media (max-width: 640px) {
+  .deck { --wall-margin: .75rem; }
+  .slide { width: 94vw; }
+  .deck-wall pre { font-size: 10px; line-height: 10px; }
+}
+
+/* ---- 16. Browser-window mockup (deck) ------------------------------------- */
+.bwin {
+  --bwin-bar: 2.1rem;
+  border: 1px solid var(--rule-bright);
+  border-radius: 7px;
+  background: var(--surface);
+  overflow: hidden;
+  box-shadow: 0 24px 60px -22px rgba(0, 0, 0, .8), 0 4px 14px -6px rgba(0, 0, 0, .6);
+}
+.bwin__bar {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  height: var(--bwin-bar);
+  padding: 0 .75rem;
+  background: linear-gradient(180deg, #1b1b21, #121216);
+  border-bottom: 1px solid var(--rule);
+}
+.bwin__dots { display: inline-flex; gap: .38rem; flex: 0 0 auto; }
+.bwin__dots i {
+  width: .55rem; height: .55rem; border-radius: 50%;
+  background: var(--rule-bright);
+}
+.bwin__url {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--f-mono);
+  font-size: .68rem;
+  letter-spacing: .02em;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: .2rem .55rem;
+}
+.bwin__body { display: block; background: var(--bg); aspect-ratio: 16 / 10; }
+.bwin__body img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Overlapping collage of mockups pinned inside a slide */
+.shots { position: relative; width: 100%; }
+.shots--wall { min-height: clamp(18rem, 52vh, 30rem); }
+.shots .bwin { position: absolute; }
+
+/* Case slide: the collage is pinned to the empty right / top-right area,
+   overlapping upward beside the copy column. */
+.shots--case {
+  position: absolute;
+  top: calc(var(--deck-pad) + 1.5rem);
+  right: var(--deck-pad);
+  width: min(52%, 41rem);
+  height: min(74vh, 35rem);
+  pointer-events: none;
+}
+body:has(.controls) .shots--case { top: calc(var(--deck-pad) + 4.6rem); }
+
+@media (max-width: 760px) {
+  .shots { display: flex; flex-direction: column; gap: 1.1rem; min-height: 0; }
+  .shots--case { position: static; width: auto; height: auto; }
+  .shots .bwin { position: static !important; width: auto !important; transform: none !important; }
+}
+
+/* ---- 17. Methodology / key-numbers slide (deck) ------------------------- */
+.method { width: 100%; max-width: none; }
+.method__head {
+  display: grid;
+  grid-template-columns: minmax(12rem, 22ch) 1fr;
+  gap: clamp(1rem, 4vw, 3rem);
+  align-items: end;
+  padding-bottom: clamp(1.4rem, 3vh, 2.2rem);
+  border-bottom: 2px solid var(--ink);
+}
+.method__kicker {
+  font-family: var(--f-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+.method__lead {
+  margin: .4rem 0 0;
+  font-family: var(--f-display);
+  font-size: clamp(1.5rem, 3.6vw, 2.6rem);
+  line-height: 1.05;
+  color: var(--ink);
+}
+.method__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+}
+.method__grid .stat {
+  padding: clamp(1rem, 2.4vh, 1.7rem) clamp(1rem, 2.6vw, 2rem) 0 0;
+}
+.method__grid .stat + .stat {
+  padding-left: clamp(1rem, 2.6vw, 2rem);
+  border-left: 1px solid var(--rule);
+}
+.stat__num {
+  display: block;
+  font-family: var(--f-display);
+  font-size: clamp(3rem, 8.5vw, 6.2rem);
+  line-height: .92;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.stat--live .stat__num { color: var(--live); }
+.stat__label {
+  display: block;
+  margin-top: .7rem;
+  max-width: 22ch;
+  font-family: var(--f-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+@media (max-width: 760px) {
+  .method__head { grid-template-columns: 1fr; align-items: start; gap: .6rem; }
+  .method__grid { grid-template-columns: 1fr; }
+  .method__grid .stat { padding: 1.3rem 0 0; }
+  .method__grid .stat + .stat { padding-left: 0; border-left: 0; border-top: 1px solid var(--rule); }
+}
+
+@media print {
+  :root {
+    --bg: #ffffff;
+    --bg-strip: #f2f2f0;
+    --surface: #f2f2f0;
+    --rule: #c7c7c2;
+    --rule-bright: #a2a29c;
+    --ink: #131313;
+    --ink-dim: #45453f;
+    --ink-faint: #6a6a63;
+    --live: #b9700a;
+    --placed: #1f7fa0;
+    --flap-leaf-top: #e7e7e4;
+    --flap-leaf-bottom: #dcdcd8;
+    --flap-seam: rgba(0, 0, 0, .18);
+    --flap-edge: rgba(255, 255, 255, .5);
+    --flap-lit: rgba(255, 255, 255, .5);
+  }
+  html, body { background: var(--bg); color: var(--ink); }
+  .deck { height: auto; overflow: visible; display: block; }
+  .deck-nav, .deck-progress, .ascii-bg, .deck-wall { display: none !important; }
+  .slide {
+    min-height: 0;
+    width: auto;
+    margin: 0;
+    page-break-after: always;
+    break-after: page;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 4vw 5vw;
+  }
+}
