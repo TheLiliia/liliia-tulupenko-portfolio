@@ -2,8 +2,6 @@
 
 Personal landing page for Liliia Tulupenko, PR & Communications Manager.
 
-**Live site:** https://annavakoliuk.github.io/Liliia-Tulupenko-portfolio/
-
 ## Project structure
 
 ```
